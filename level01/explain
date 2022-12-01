@@ -1,0 +1,2 @@
+read username with 256 buffer (print dat_wil + 248 * "A")
+then read password with 100 buffer which overflow
