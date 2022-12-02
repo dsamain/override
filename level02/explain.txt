@@ -29,3 +29,6 @@ we can see [ user_pass ] [ real_pass ] [ user_name ] as expected (see addresses 
 
 It might not work because printf %p remove any leading 0, so if address starts with 0 it is removed, so try adding them back (ptrs should be 8 bytes long)
 anndd, they are already all there, it's weird because the output very much looks like a flag
+
+We figured out that %p expect a little endian format adress so it reverse the output 
+we converted 756e50523437684845414a3561733951377a7143574e6758354a35686e47587348336750664b394d into big_endian (with convert.cpp) and then gg
