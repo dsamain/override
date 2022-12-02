@@ -2,13 +2,13 @@ After 1/2 hours reconstructing the code, we can see that the program does 'prinf
 The simplest string we can think of is ("%s", real_pass), we will have to mess around to find the number of random values we need to pop to get it, but that should be pretty easy
 
 So inputs should be:
-"%p%p%p%p%s"
+"%p%p%p%p%p"...
 "We don't care about password"
 
 We need to mess around with the number of %p and we should find the password, see bruteforce.py which does it automatically
 because with %p (or %x) we can print the stack, and real_pass is stored in stack, we should be able to find it
 
-We find that we can put max 42 %p in buffer
+We find that we can put max 42 %p in buffer (%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p%p)
 Analyzing the output, we find this bit:
 0x756e5052343768480x45414a35617339510x377a7143574e67580x354a35686e4758730x48336750664b394d
 which could be the flag, we can count 40 bytes which is the length of previous flags, without 0x:
@@ -29,3 +29,9 @@ we can see [ user_pass ] [ real_pass ] [ user_name ] as expected (see addresses 
 
 It might not work because printf %p remove any leading 0, so if address starts with 0 it is removed, so try adding them back (ptrs should be 8 bytes long)
 anndd, they are already all there, it's weird because the output very much looks like a flag
+
+I'm dumb, it's probably just printed in little endian, so we need to reverse eacch group of 8 bytes, like so:
+4868373452506e75 51397361354a4145 58674e5743717a37 7358476e68354a35 4d394b6650673348
+
+which gives (in ASCII):
+Hh74RPnuQ9sa5JAEXgNWCqz7sXGnh5J5M9KfPg3H
