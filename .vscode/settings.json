@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "prctl.h": "c",
+        "ptrace.h": "c",
+        "cstdio": "c",
+        "waitstatus.h": "c"
+    }
+}
