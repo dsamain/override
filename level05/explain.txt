@@ -1,0 +1,4 @@
+only main, nothing in rodata
+
+it seems to do fgets(buf, 0x64 (100)) then printf(buf)
+so it's probably a printf exploit
