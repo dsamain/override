@@ -1,0 +1,16 @@
+We are forced to input more than 5 chars, all with a value superior to 0x1f (so any alphanumeric will do), then we should see what the cipher does
+because we need to match serial with p1
+
+instead of trying to decypher, we can use gdb to set eax != -1 on the ptrace, then see what p1 looks like when it gets compared, then we can just set serial to this number and gg
+set breakpoint on cmp, we can see with 'info reg' that eax = -1, but we can 'set $eax=0' to bypass the check, which works
+
+test input: "AAAAAA" and "31"
+
+with those inputs, we can see that it compares the 31 with 0x005f0c3a (6229050)
+so we can try to just put "6229050" as input instead of "31", in gdb we can see that the comparison does not change depending on serial (which confirms the reverse_engineering.c)
+so when we put 6229050, it compares it with 6229050 which is equal, still in gdb, we can see that the auth function successfully returns 0, so it should open a shell, let's
+try it outside gdb
+
+./level06
+AAAAAA
+6229050
