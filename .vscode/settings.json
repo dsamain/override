@@ -3,6 +3,8 @@
         "prctl.h": "c",
         "ptrace.h": "c",
         "cstdio": "c",
-        "waitstatus.h": "c"
+        "waitstatus.h": "c",
+        "signal.h": "c",
+        "cdefs.h": "c"
     }
 }

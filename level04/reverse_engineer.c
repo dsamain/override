@@ -41,8 +41,9 @@ int main(int argc, char **argv)
 
             int word = ptrace(PTRACE_PEEKUSER /*(3)*/, pid, 44 /*(0x2c)*/, 0 /*Prolly end of va_arg*/);
             // read a word in process user area at offset 44
-            if (word == 0xb) // if (word == 0xb)
+            if (word == 0xb)
             {
+                // when we put a shellcode this is true i want to die
                 puts("no exec() for you");
                 kill(pid, SIGKILL /*(9)*/);
                 return 0;
