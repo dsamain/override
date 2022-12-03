@@ -85,7 +85,6 @@ int main(int argc, char **argv)
 int main()
 {
     char buf[100]; // esp+0x28
-    int pouet = 0; // esp+0x8c
 
     fgets(buf, 100, stdin);
 
@@ -100,7 +99,7 @@ int main()
         if (buf[i] < 'A' || buf[i] > 'Z')
             continue;
 
-        buf[i] -= ('A' - 'a');
+        buf[i] += 0x20; // = lowercasify
     }
     
     printf(buf);

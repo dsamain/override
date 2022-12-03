@@ -2,3 +2,8 @@ only main, nothing in rodata
 
 it seems to do fgets(buf, 0x64 (100)) then printf(buf)
 so it's probably a printf exploit
+see reverse_engineer.c
+
+https://samsclass.info/127/proj/p6a-fs.htm
+
+the goal is to do 4 "%n" each 1 byte offseted so that we can write 4 bytes (since we can't write the 4 and once 0xffffffff is too big)
