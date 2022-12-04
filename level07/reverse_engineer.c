@@ -26,17 +26,16 @@ unsigned int get_unum()
     return unum;
 }
 
-void store_number(int *number, int index)
+int store_number(int *numbers) // ebp +0x8
 {
-    // 0x28 on stack
     printf(" Number: ");
-    unsigned int unum1 = get_unum(); // ebp-0x10
+    unsigned int number = get_unum(); // ebp-0x10
     printf(" Index: ");
-    unsigned int unum2 = get_unum(); // ebp-0xc
+    unsigned int index = get_unum(); // ebp-0xc
 
-    // mov ecx, unum2
+    // mov ecx, index
     // mov edx, 0xaaaaaaab
-    // mov eax, unum2
+    // mov eax, index
 
     // mul edx
     // shr edx, 0x1f
@@ -53,9 +52,9 @@ void store_number(int *number, int index)
    // int edx;
    // int eax;
 
-   // ecx = unum2;
+   // ecx = index;
    // edx = 0xaaaaaaab;
-   // eax = unum2;
+   // eax = index;
 
    // eax *= edx;
    // edx = eax >> 0x1f;
@@ -66,11 +65,14 @@ void store_number(int *number, int index)
    // edx = ecx;
    // edx -= eax;
 
+    // see https://stackoverflow.com/questions/63417818/why-does-division-by-3-require-a-rightshift-and-other-oddities-on-x86
+    // int eax = index * 0xaaaaaaab; // 0xaaaaaaab = 2863311531
+    // eax >>= 31;
+    // eax += eax + eax;
+    // if (index - eax == 0)
 
-    int eax = unum2 * 0xaaaaaaab;
-    eax >>= 31;
-    eax += eax + eax;
-    if (unum2 - eax == 0)
+    // this seems to just be a division, by trying it out, we see that it divides by 3, if remainder is 0, it prints the error
+    if (index % 3 == 0)
     {
         puts(" *** ERROR! ***");
         puts("   This index is reserved for wil!");
@@ -78,16 +80,130 @@ void store_number(int *number, int index)
         return 1;
     }
 
-    if (unum1 >> 24 != 0xb7)
+    if (number >> 24 != 0xb7) // if first byte != 0xb7
     {
-        // mov eax, unum2
+        // mov eax, index
         // shl eax, 2
         // add eax, number
-        // mov edx, unum1
+        // mov edx, number
         // mov [eax], edx
 
-        number[unum2 >> 2] = unum1;
+        numbers[index << 2] = number;
     }
-    
+    else
+    {
+        puts(" *** ERROR! ***");
+        puts("   This index is reserved for wil!");
+        puts(" *** ERROR! ***");
+        return 1;
+    }
+
     return 0;
+}
+
+int read_number(int *numbers) // ebp + 0x8
+{
+    printf(" Index: ");
+    unsigned int index = get_unum() << 2;
+    printf(" Number at data[%u] is %u\n", index, numbers[index]);
+    return 0;
+}
+
+int main(int argc, char **argv) // argc = esp+0x8, argv = esp+0xc
+{
+    // add 0x1d0 on stack (464)
+
+    // mov eax, argv (ebp+0x1c)
+    // mov esp+0x1c, eax
+    char **arguments = argv;
+
+    // mov eax, ebp+0x10
+    // mov esp+0x18, eax
+    char **arguments2 = (char **)((char *)argv + 2);
+
+
+    // mov eax,gs:0x14
+    // mov esp+0x1cc, eax
+    // eax=0
+    // these above are probably gcc related to stack protection (canary)
+
+    int n1 = 0; // esp+0x1b4
+
+    // int n2 = 0; // esp+0x1b8
+    // int n3 = 0; // esp+0x1bc
+    // int n4 = 0; // esp+0x1c0
+    // int n5 = 0; // esp+0x1c4
+    // int n6 = 0; // esp+0x1c8
+    char cmd[20] = {0};
+    
+    // int pouet;
+    // mov eax, &pouet
+    char numbers[100/*(0x64)*/] = {0}; // esp+0x24
+
+    //goto suce2;
+//
+    //suce1: // main+132
+    //memset(argv[0], 0, strlen(arguments[0]));
+//
+    //suce2: // main+199
+    //if (*arguments != NULL)
+    //    goto suce1;
+
+    if (arguments[0] != NULL)
+        memset(arguments[0], 0, strlen(arguments[0]));
+
+    // main+209 here
+    // goto suce3;
+    // suce3: // main+278
+    // mov eax, *arguments2
+    // edx = strlen(arguments2)
+
+    if (arguments[0] != NULL)
+        memset(arguments2[0], 0, strlen(arguments[0]));
+
+    // main+288 here
+    puts("----------------------------------------------------");
+    
+    while (1)
+    {
+        printf("Input command: ");
+        n1 = 1;
+        fgets(n2, 20/*(0x14)*/, stdin);
+
+        // mov eax ,strlen(n2)-1
+        n2[strlen(n2) - 1] = '\0'; // remove '\n' I guess
+
+        // main+411 here
+        // if (strncmp(n2, "read", 5) != 0)
+        //     goto suce4;
+
+        // store_number(numbers);
+
+        // suce4: // main+469
+
+        int res;
+        if (strncmp(n2, "store", 5) == 0)
+            res = store_number(numbers);
+        else if (strncmp(n2, "read", 4) == 0)
+            res = read_number(numbers);
+        else if (strncmp(n2, "quit", 4) == 0)
+            return 0; // weird things in asm but I guess it's the stack check
+
+        // main+578 here
+        // if (res == 0)
+        //     goto suce5;
+    // 
+        // printf("Failed to do %s command\n", cmd);
+        // suce5: // main+614
+
+        if (res != 0)
+            printf(" Failed to do %s command\n", cmd);
+        else
+            printf(" Completed %s command successfully\n", cmd);
+
+        
+        // main+638 here
+        bzero(cmd, 20); // optimized in asm with 5 ints but same result
+        // jmp main+300 (right after puts("--------"")) = while true
+    }
 }

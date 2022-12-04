@@ -1,0 +1,1 @@
+We can read up to index 686, after that we get a segfault
