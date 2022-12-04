@@ -80,7 +80,8 @@ int store_number(int *numbers) // ebp +0x8
         return 1;
     }
 
-    if (number >> 24 != 0xb7) // if first byte != 0xb7
+    // if (number >> 24 != 0xb7) // if first byte != 0xb7, means the range [0xb7000000, 0xb8000000[ ([3070230528, 3087007744[) is forbidden
+    if (number < 3070230528 || number >= 3087007744)
     {
         // mov eax, index
         // shl eax, 2
@@ -88,7 +89,9 @@ int store_number(int *numbers) // ebp +0x8
         // mov edx, number
         // mov [eax], edx
 
-        numbers[index << 2] = number;
+        // numbers[index << 2] = number; // numbers[index*4] = number;
+        // since numbers is an int array and not char, in bytes we need to mult*4 since sizeof(int) = 4
+        numbers[index] = number;
     }
     else
     {
@@ -104,7 +107,7 @@ int store_number(int *numbers) // ebp +0x8
 int read_number(int *numbers) // ebp + 0x8
 {
     printf(" Index: ");
-    unsigned int index = get_unum() << 2;
+    unsigned int index = get_unum(); // << 2; // not << 2 since numbers is int array not char anymore
     printf(" Number at data[%u] is %u\n", index, numbers[index]);
     return 0;
 }
@@ -138,7 +141,12 @@ int main(int argc, char **argv) // argc = esp+0x8, argv = esp+0xc
     
     // int pouet;
     // mov eax, &pouet
-    char numbers[100/*(0x64)*/] = {0}; // esp+0x24
+    // char numbers[100/*(0x64)*/] = {0}; // esp+0x24
+    // there seems to be nothing between esp+0x24 and esp+0x1b8 so size is probably 0x1b8-0x24 = 0x194 (404), so 101 ints
+    // it's probably 100 in reality but we dont really care
+    int numbers[101] = {0};
+    // 25 firsts nums (100 first bytes) are set to 0
+    bzero(numbers, 100);
 
     //goto suce2;
 //
@@ -163,7 +171,7 @@ int main(int argc, char **argv) // argc = esp+0x8, argv = esp+0xc
 
     // main+288 here
     puts("----------------------------------------------------");
-    
+
     while (1)
     {
         printf("Input command: ");
@@ -187,7 +195,7 @@ int main(int argc, char **argv) // argc = esp+0x8, argv = esp+0xc
         else if (strncmp(n2, "read", 4) == 0)
             res = read_number(numbers);
         else if (strncmp(n2, "quit", 4) == 0)
-            return 0; // weird things in asm but I guess it's the stack check
+            break; 
 
         // main+578 here
         // if (res == 0)
@@ -206,4 +214,7 @@ int main(int argc, char **argv) // argc = esp+0x8, argv = esp+0xc
         bzero(cmd, 20); // optimized in asm with 5 ints but same result
         // jmp main+300 (right after puts("--------"")) = while true
     }
+
+    // weird things in asm but I guess it's the stack check
+    return 0;
 }

