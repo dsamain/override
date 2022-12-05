@@ -31,7 +31,8 @@ int store_number(int *numbers) // ebp +0x8
     printf(" Number: ");
     unsigned int number = get_unum(); // ebp-0x10
     printf(" Index: ");
-    unsigned int index = get_unum(); // ebp-0xc
+    // unsigned int index = get_unum(); // ebp-0xc
+    int index = (int) get_unum();
 
     // mov ecx, index
     // mov edx, 0xaaaaaaab
@@ -96,7 +97,7 @@ int store_number(int *numbers) // ebp +0x8
     else
     {
         puts(" *** ERROR! ***");
-        puts("   This index is reserved for wil!");
+        puts("   This index is reserved for- wil!");
         puts(" *** ERROR! ***");
         return 1;
     }
@@ -107,12 +108,12 @@ int store_number(int *numbers) // ebp +0x8
 int read_number(int *numbers) // ebp + 0x8
 {
     printf(" Index: ");
-    unsigned int index = get_unum(); // << 2; // not << 2 since numbers is int array not char anymore
+    int index = (int) get_unum(); // << 2; // not << 2 since numbers is int array not char anymore
     printf(" Number at data[%u] is %u\n", index, numbers[index]);
     return 0;
 }
 
-int main(int argc, char **argv) // argc = esp+0x8, argv = esp+0xc
+int main(int argc, char **argv, char **envp) // argc = esp+0x8, argv = esp+0xc, envp = esp+0x10
 {
     // add 0x1d0 on stack (464)
 
@@ -122,7 +123,7 @@ int main(int argc, char **argv) // argc = esp+0x8, argv = esp+0xc
 
     // mov eax, ebp+0x10
     // mov esp+0x18, eax
-    char **arguments2 = (char **)((char *)argv + 2);
+    char **environment = envp;
 
 
     // mov eax,gs:0x14
@@ -166,8 +167,10 @@ int main(int argc, char **argv) // argc = esp+0x8, argv = esp+0xc
     // mov eax, *arguments2
     // edx = strlen(arguments2)
 
-    if (arguments[0] != NULL)
-        memset(arguments2[0], 0, strlen(arguments[0]));
+    if (environment[0] != NULL)
+        memset(environment[0], 0, strlen(environment[0]));
+
+    // actually whole env and argv are bzeroed
 
     // main+288 here
     puts("----------------------------------------------------");

@@ -5,7 +5,7 @@
 
 void clear_stdin()
 {
-    while (getchar() != EOF); // same as above, just shorter
+    while (getchar() != EOF);
 }
 
 unsigned int get_unum()
@@ -23,7 +23,7 @@ int store_number(int *numbers)
     printf(" Number: ");
     unsigned int number = get_unum();
     printf(" Index: ");
-    unsigned int index = get_unum();
+    int index = (int) get_unum();
 
     if (index % 3 == 0)
     {
@@ -33,7 +33,6 @@ int store_number(int *numbers)
         return 1;
     }
 
-    4 294 958 434
     if (number < 3070230528 || number >= 3087007744) // number starts with 0xb7
         numbers[index] = number;
     else
@@ -50,28 +49,24 @@ int store_number(int *numbers)
 int read_number(int *numbers)
 {
     printf(" Index: ");
-    unsigned int index = get_unum();
+    int index = (int) get_unum();
     printf(" Number at data[%u] is %u\n", index, numbers[index]);
     return 0;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char **argv, char **envp)
 {
-    char **arguments = argv;
-    char **arguments2 = (char **)((char *)argv + 2);
-
-
     int n1 = 0;
     char cmd[20] = {0};
     
     int numbers[404] = {0};
     bzero(numbers, 100);
 
-    if (arguments[0] != NULL)
-        memset(arguments[0], 0, strlen(arguments[0]));
-
-    if (arguments2[0] != NULL)
-        memset(arguments2[0], 0, strlen(arguments[0]));
+    if (argv[0] != NULL)
+        memset(argv[0], 0, strlen(argv[0]));
+    if (envp[0] != NULL)
+        memset(envp[0], 0, strlen(envp[0]));
+    // actually whole envp and argv are cleared
 
     puts("----------------------------------------------------");
 

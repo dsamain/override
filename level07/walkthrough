@@ -75,3 +75,81 @@ in decimal (https://www.convzone.com/hex-to-decimal/):
 
 
 im blocked on offset 0xffffd814 its so weird idk why it changed and now im cringed
+
+
+
+
+linux:
+buffer address: 0xffffd544
+eip save stored at 0xffffd61c
+
+0xffffd61c - 0xffffd544 = 0xd8 (216) in int = 54
+
+
+
+Ok so maybe it's because _fini has some weird behavior, so we can try to find another ret
+We find that exit is called in __libc_start_main right after the main() call
+in exit we find a  'call   0xf7f55d73', if we look at what is present at this addres, we see:
+mov ebx, DWORD PTR [esp]
+ret
+
+so we can try to override this ret, it's stored at 0xffffd704 (val is 0xf7e5eb76)
+
+0xffffd704 - 0xffffd544 = 0x1c0 (448) in int = 112, it's not divisible by 3 so it's good
+so if we try to read at index 112, we find: nothing it's empty :(
+
+
+
+
+after all that, we tried negative index because we had no other ideas, and it works :D, so we guess the unsigned int is casted to a signed int, so we can use negative index
+so now it should be pretty straightforward to override store_number ret to our shellcode
+
+store_number EIP save stored at 0xffffd7ec (val is 0x080488ef)
+buffer stored at 0xffffd814
+
+0xffffd7ec - 0xffffd814 = -0x28 (-40) in int = -10, not a multiple of 3 so its good
+since it's negative, -10
+so we should input index: '-10' and number: <shellcode addr>
+but when trying it, it seems that -10%3 == 0, i want to die
+
+After messing with gdb, we find that the environment is bzero'ed in main as well as arguments, so we cannot use them to store our shellcode
+so we need to store our shellcode in the buffer, and jump to it, or try ret2libc if we are lucky with indexes (since it shouldnt be a multiple of 3)
+
+if we read at index -10, we get 0x08048930 (which is EIP save of read_number)
+
+Ok so anyway we have to find a way to write at a protected index with another index, an overflow maybe ?
+Also, we might aswell go back to main EIP save since it's easier to work with and we have the same problem on both main and store_number EIP
+
+so we need to write at index 114, but it's protected, can we overflow to write to it ?
+We tried uint_max as index in read, and in int it's casted to -1 so it's pretty nice
+we can see that -4294967294 (- UINT_MAX) + 1 is converted to 2, so after messing around, we find that
+read -4294967182 returns index 114, but when writing to it we get the "wil reserved" message, so it doesnt work
+
+Since array is an int array, the asm needs to write to buf + 4 * index (because sizeof(int) == 4)
+so if we input (UINT_MAX/4) + 1, we should arrive at index 1 with overflow (since when reading it also reads * 4, that's why we input + 1 and not +0.25)
+so (4294967296/4) + 1 = 1073741825
+lets try storing 9999 at index 1073741825, then reading at index 1, we should get back 9999
+and it works, so we can use this to write to protected index
+we want to write to index 114, so we need to write to index (4294967296/4 + 114) = 1073741938
+if we write at this index, we can successfully retrieve it using read at 114 so we finally found a way to bypass the check and write to 114
+
+if we do this in gdb, then 'quit' with a breakpoing on ret, we see that it will jmp to our input, so now we need to find where to jmp
+We can do shellcode but as said before it would be tideous to input the shellcode manually with forbidden indexes, so we can try ret2libc first
+https://beta.hackndo.com/retour-a-la-libc/
+system address: 0xf7e6aed0 (to decimal: 4159090384)
+"/bin/sh" address: 0xf7f897ec (to decimal: 4160264172)
+
+so we need
+indexes:      114               115                116
+values:  [ system addr ] [ 4 random bytes ] [ "/bin/sh" addr ]
+
+luckily since 114 is a multiple of 3, it means 115 and 116 can be used as they are without overflow or anything
+
+we need the 4 random bytes because when entering system, it will expect eip save to be on top of the stack, (ebp+4), and arg at ebp+8
+we can just don't touch it because we don't care if program crashes after system(), we got our shell so it's ok
+
+so we should write:
+store 4159090384 1073741938  (114 with overflow)
+store 4160264172 116
+
+now when we 'quit', we should jump to system("/bin/sh") and get our shell, and it works :D Finally after a lot of time we got our flag
