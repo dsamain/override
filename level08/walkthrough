@@ -1,0 +1,11 @@
+binary take a path to a file as argument
+it first try to read ./backup/.logs so we have the be in the level09 directory to exec
+then he cat "./backups/" and the path, read the file and put the content into /backups/path
+problem is if the path contain a / (like in /home/users/level09/.pass for example), the output
+path will be './backups//home...' so we have to avoid puting a / at the start of the path
+so we can just create a symbolic link to the level09/.pass in the level08 dir and then gg
+
+final command : 
+    ln -s /home/users/level09/.pass pouet && ./level08 pouet && cat ./backups/pouet
+
+(need to finish reverese engineering btw)
